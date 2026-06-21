@@ -1,9 +1,11 @@
+import time
 import streamlit as st
 from PyPDF2 import PdfReader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 import google.generativeai as genai
+from google.api_core.exceptions import ResourceExhausted, InvalidArgument, NotFound
 
 # ── Page config ──────────────────────────────────────────────────────────────
 st.set_page_config(page_title="PDF Chat (RAG)", page_icon="📄")
@@ -44,7 +46,10 @@ def build_vectorstore(text):
 
 def ask_gemini(api_key, context_chunks, question):
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel("gemini-2.0-flash")
+
+    # Try models in order — fall back if one fails
+    models_to_try = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.0-pro"]
+
     context = "\n\n---\n\n".join(context_chunks)
     prompt = f"""You are a helpful assistant. Answer the question below using ONLY the context provided.
 If the answer is not in the context, say "I couldn't find that in the uploaded documents."
@@ -55,8 +60,51 @@ Context:
 Question: {question}
 
 Answer:"""
-    response = model.generate_content(prompt)
-    return response.text
+
+    for model_name in models_to_try:
+        try:
+            model = genai.GenerativeModel(model_name)
+            response = model.generate_content(prompt)
+            return response.text
+
+        except NotFound:
+            # This model doesn't exist, try next
+            continue
+
+        except InvalidArgument:
+            # Prompt too long — trim context and retry same model
+            context = "\n\n---\n\n".join(context_chunks[:1])  # use only 1 chunk
+            prompt = f"""You are a helpful assistant. Answer using ONLY the context below.
+If the answer is not in the context, say "I couldn't find that in the uploaded documents."
+
+Context:
+{context}
+
+Question: {question}
+
+Answer:"""
+            try:
+                model = genai.GenerativeModel(model_name)
+                response = model.generate_content(prompt)
+                return response.text
+            except Exception:
+                continue
+
+        except ResourceExhausted:
+            # Rate limit hit — wait and retry once
+            time.sleep(10)
+            try:
+                model = genai.GenerativeModel(model_name)
+                response = model.generate_content(prompt)
+                return response.text
+            except ResourceExhausted:
+                return "⚠️ You've hit the Gemini free tier rate limit. Please wait a minute and try again."
+
+        except Exception as e:
+            return f"⚠️ Unexpected error: {str(e)}"
+
+    return "⚠️ Could not get a response from Gemini. Please try again later."
+
 
 # ── Process PDFs ──────────────────────────────────────────────────────────────
 
