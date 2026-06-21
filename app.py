@@ -44,7 +44,7 @@ def build_vectorstore(text):
 
 def ask_gemini(api_key, context_chunks, question):
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel("gemini-1.5-flash")
+    model = genai.GenerativeModel("gemini-2.0-flash")
     context = "\n\n---\n\n".join(context_chunks)
     prompt = f"""You are a helpful assistant. Answer the question below using ONLY the context provided.
 If the answer is not in the context, say "I couldn't find that in the uploaded documents."
