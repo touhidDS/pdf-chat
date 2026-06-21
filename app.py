@@ -35,7 +35,7 @@ def extract_text(files):
 
 
 def build_vectorstore(text):
-    splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+    splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
     chunks = splitter.split_text(text)
     embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
     vectorstore = FAISS.from_texts(chunks, embedding=embeddings)
@@ -93,7 +93,7 @@ if question := st.chat_input("Ask a question about your PDFs…"):
         with st.chat_message("assistant"):
             with st.spinner("Thinking…"):
                 vs = st.session_state["vectorstore"]
-                docs = vs.similarity_search(question, k=4)
+                docs = vs.similarity_search(question, k=2)
                 context_chunks = [d.page_content for d in docs]
                 answer = ask_gemini(st.session_state["api_key"], context_chunks, question)
             st.markdown(answer)
