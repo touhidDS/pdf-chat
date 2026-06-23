@@ -48,7 +48,7 @@ def ask_gemini(api_key, context_chunks, question):
     genai.configure(api_key=api_key)
 
     # Try models in order — fall back if one fails
-    models_to_try = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.0-pro"]
+    models_to_try = ["gemini-2.5-flash-lite", "gemini-2.5-flash"]
 
     context = "\n\n---\n\n".join(context_chunks)
     prompt = f"""You are a helpful assistant. Answer the question below using ONLY the context provided.
