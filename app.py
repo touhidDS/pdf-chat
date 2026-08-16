@@ -1,7 +1,6 @@
 import time
 import pdfplumber
 import streamlit as st
-from PyPDF2 import PdfReader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
@@ -24,6 +23,9 @@ with st.sidebar:
     )
     process_btn = st.button("🚀 Process PDFs", use_container_width=True)
 
+    st.divider()
+    debug_mode = st.checkbox("🔍 Show retrieved chunks (debug)", value=False)
+
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def extract_text(files):
@@ -35,6 +37,7 @@ def extract_text(files):
                 if text:
                     combined += text + "\n"
     return combined
+
 
 def build_vectorstore(text):
     splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
@@ -143,8 +146,14 @@ if question := st.chat_input("Ask a question about your PDFs…"):
         with st.chat_message("assistant"):
             with st.spinner("Thinking…"):
                 vs = st.session_state["vectorstore"]
-                docs = vs.similarity_search(question, k=4)
+                docs = vs.similarity_search(question, k=6)  # was k=4 — wider retrieval net
                 context_chunks = [d.page_content for d in docs]
+
+                if debug_mode:
+                    with st.expander("🔍 Debug: retrieved chunks"):
+                        for i, c in enumerate(context_chunks):
+                            st.text(f"Chunk {i + 1}: {c[:300]}")
+
                 answer = ask_gemini(st.session_state["api_key"], context_chunks, question)
             st.markdown(answer)
 
