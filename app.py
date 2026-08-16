@@ -1,4 +1,5 @@
 import time
+import pdfplumber
 import streamlit as st
 from PyPDF2 import PdfReader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -28,16 +29,15 @@ with st.sidebar:
 def extract_text(files):
     combined = ""
     for f in files:
-        reader = PdfReader(f)
-        for page in reader.pages:
-            text = page.extract_text()
-            if text:
-                combined += text + "\n"
+        with pdfplumber.open(f) as pdf:
+            for page in pdf.pages:
+                text = page.extract_text()
+                if text:
+                    combined += text + "\n"
     return combined
 
-
 def build_vectorstore(text):
-    splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
+    splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
     chunks = splitter.split_text(text)
     embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
     vectorstore = FAISS.from_texts(chunks, embedding=embeddings)
@@ -141,7 +141,7 @@ if question := st.chat_input("Ask a question about your PDFs…"):
         with st.chat_message("assistant"):
             with st.spinner("Thinking…"):
                 vs = st.session_state["vectorstore"]
-                docs = vs.similarity_search(question, k=2)
+                docs = vs.similarity_search(question, k=4)
                 context_chunks = [d.page_content for d in docs]
                 answer = ask_gemini(st.session_state["api_key"], context_chunks, question)
             st.markdown(answer)
