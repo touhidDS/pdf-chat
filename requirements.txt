@@ -1,4 +1,5 @@
 streamlit
+pdfplumber
 PyPDF2
 langchain
 langchain-community
