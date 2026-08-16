@@ -51,8 +51,10 @@ def ask_gemini(api_key, context_chunks, question):
     models_to_try = ["gemini-2.5-flash-lite", "gemini-2.5-flash"]
 
     context = "\n\n---\n\n".join(context_chunks)
-    prompt = f"""You are a helpful assistant. Answer the question below using ONLY the context provided.
-If the answer is not in the context, say "I couldn't find that in the uploaded documents."
+    prompt = f"""You are a helpful assistant. Answer the question using ONLY the context provided below.
+You may reason logically using the information present (for example, if a document lists only a Bachelor's degree and nothing else, you can correctly conclude no Master's degree is mentioned).
+Do not use any outside knowledge or make assumptions beyond what the context supports.
+If there is truly nothing relevant in the context to answer the question, say "I couldn't find that in the uploaded documents."
 
 Context:
 {context}
